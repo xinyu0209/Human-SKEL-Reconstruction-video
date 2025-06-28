@@ -1,0 +1,83 @@
+body_models:
+
+  skel_mix_hsmr:
+    _target_: lib.body_models.skel_wrapper.SKELWrapper
+    model_path: '${_pm_.inputs}/body_models/skel/skel_models_v1.1'
+    gender: male  # Use male since we don't have neutral model. 感觉男性的身体模型作为参数可能误差会有点大，回头找找有没有neutral的
+    joint_regressor_extra: '${_pm_.inputs}/body_models/SMPL_to_J19.pkl'
+    joint_regressor_custom: '${_pm_.inputs}/body_models/J_regressor_SKEL_mix_MALE.pkl'
+
+  skel_hsmr:
+    _target_: lib.body_models.skel_wrapper.SKELWrapper
+    model_path: '${_pm_.inputs}/body_models/skel'
+    gender: male  # Use male since we don't have neutral model.
+    joint_regressor_extra: '${_pm_.inputs}/body_models/SMPL_to_J19.pkl'
+    # joint_regressor_custom: '${_pm_.inputs}/body_models/J_regressor_SMPL_MALE.pkl'
+
+  smpl_hsmr:
+    _target_: lib.body_models.smpl_wrapper.SMPLWrapper
+    model_path: '${_pm_.inputs}/body_models/smpl'
+    gender: male  # align with skel_hsmr
+    num_body_joints: 23
+    joint_regressor_extra: '${_pm_.inputs}/body_models/SMPL_to_J19.pkl'
+
+  smpl_hsmr_neutral:
+    _target_: lib.body_models.smpl_wrapper.SMPLWrapper
+    model_path: '${_pm_.inputs}/body_models/smpl'
+    gender: neutral  # align with skel_hsmr
+    num_body_joints: 23
+    joint_regressor_extra: '${_pm_.inputs}/body_models/SMPL_to_J19.pkl'
+
+backbones:
+
+  vit_b: #VIT-base 用于小数据集调试（消融实验）
+    _target_: lib.modeling.networks.backbones.ViT
+    img_size: [256, 192]
+    patch_size: 16
+    embed_dim: 768
+    depth: 12
+    num_heads: 12
+    ratio: 1
+    use_checkpoint: False
+    mlp_ratio: 4
+    qkv_bias: True
+    drop_path_rate: 0.3
+
+  vit_h:  #VIT-huge 用于大数据集推理
+    _target_: lib.modeling.networks.backbones.ViT
+    img_size: [256, 192]
+    patch_size: 16
+    embed_dim: 1280
+    depth: 32
+    num_heads: 16
+    ratio: 1
+    use_checkpoint: False
+    mlp_ratio: 4
+    qkv_bias: True
+    drop_path_rate: 0.55
+
+  mamba_h:  #第一次：mamba初始架构
+    _target_: lib.modeling.networks.backbones.Mamba 
+    img_size: [256, 192]
+    patch_size: 16
+    embed_dim: 1280       # 保持相同通道数
+    depth: 32              # 保持相同深度
+    d_state: 16            # Mamba特有参数（状态维度）
+    d_conv: 4              # Mamba卷积核大小
+    expand: 2              # 扩展因子（建议2-4）
+    drop_path_rate: 0.55   # 保持相同随机深度率
+    mlp_ratio: 4           # 保持相同MLP扩展比
+    use_checkpoint: False   # 保持相同检查点设置
+
+  mamba2:  #第二次：vision mamba
+    _target_: lib.modeling.networks.backbones.Mamba2
+    img_size: [256, 192]
+    patch_size: 16
+    embed_dim: 1280
+    depth: 12
+    ratio: 1
+    use_checkpoint: False
+    d_state: 16
+    d_conv: 4
+    expand: 2
+    enhancer_kernel: 3
